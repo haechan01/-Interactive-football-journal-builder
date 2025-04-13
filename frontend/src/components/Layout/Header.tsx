@@ -1,82 +1,61 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const location = useLocation();
+
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
+
+  // Close mobile menu when changing routes
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location]);
 
   return (
-    <header className="bg-primary-700 text-white shadow-md">
-      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        <Link to="/" className="text-xl font-bold">Football Data App</Link>
-        
-        <button 
-          className="md:hidden focus:outline-none" 
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+    <header className="header">
+      <div className="header-container">
+        <Link to="/" className="logo">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            <path d="M2 12h20" />
           </svg>
-        </button>
+          FootballViz
+        </Link>
         
-        <nav className="hidden md:flex space-x-6">
-          <Link to="/dashboard" className="hover:text-primary-200">Dashboard</Link>
-          <Link to="/teams" className="hover:text-primary-200">Teams</Link>
-          <Link to="/leagues" className="hover:text-primary-200">Leagues</Link>
-          <Link to="/matches" className="hover:text-primary-200">Matches</Link>
-          <Link to="/players" className="hover:text-primary-200">Players</Link>
-          <Link to="/journals" className="hover:text-primary-200">Journals</Link>
+        <nav className="nav">
+          <Link to="/dashboard" className={`nav-item ${isActive('/dashboard') ? 'active' : ''}`}>Dashboard</Link>
+          <Link to="/leagues" className={`nav-item ${isActive('/leagues') ? 'active' : ''}`}>Leagues</Link>
+          <Link to="/teams" className={`nav-item ${isActive('/teams') ? 'active' : ''}`}>Teams</Link>
+          <Link to="/games" className={`nav-item ${isActive('/games') ? 'active' : ''}`}>Games</Link>
+          <Link to="/players" className={`nav-item ${isActive('/players') ? 'active' : ''}`}>Players</Link>
+          <Link to="/journals" className={`nav-item ${isActive('/journals') ? 'active' : ''}`}>Journals</Link>
         </nav>
         
-        {/* Mobile menu */}
-        {isMenuOpen && (
-          <div className="absolute top-16 right-0 left-0 bg-primary-700 shadow-md md:hidden z-10">
-            <div className="px-2 pt-2 pb-3 space-y-1">
-              <Link 
-                to="/dashboard" 
-                className="block px-3 py-2 rounded-md hover:bg-primary-600"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Dashboard
-              </Link>
-              <Link 
-                to="/teams" 
-                className="block px-3 py-2 rounded-md hover:bg-primary-600"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Teams
-              </Link>
-              <Link 
-                to="/leagues" 
-                className="block px-3 py-2 rounded-md hover:bg-primary-600"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Leagues
-              </Link>
-              <Link 
-                to="/matches" 
-                className="block px-3 py-2 rounded-md hover:bg-primary-600"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Matches
-              </Link>
-              <Link 
-                to="/players" 
-                className="block px-3 py-2 rounded-md hover:bg-primary-600"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Players
-              </Link>
-              <Link 
-                to="/journals" 
-                className="block px-3 py-2 rounded-md hover:bg-primary-600"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Journals
-              </Link>
-            </div>
-          </div>
-        )}
+        <button 
+          className="mobile-menu-button"
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          aria-label="Toggle menu"
+        >
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
+          </svg>
+        </button>
       </div>
+      
+      {isMenuOpen && (
+        <div className="mobile-menu">
+          <Link to="/dashboard" className="mobile-menu-item">Dashboard</Link>
+          <Link to="/leagues" className="mobile-menu-item">Leagues</Link>
+          <Link to="/teams" className="mobile-menu-item">Teams</Link>
+          <Link to="/matches" className="mobile-menu-item">Matches</Link>
+          <Link to="/players" className="mobile-menu-item">Players</Link>
+          <Link to="/journals" className="mobile-menu-item">Journals</Link>
+        </div>
+      )}
     </header>
   );
 };

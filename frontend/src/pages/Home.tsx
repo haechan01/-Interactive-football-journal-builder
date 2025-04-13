@@ -4,63 +4,52 @@ import Layout from '../components/Layout';
 const Home = () => {
   return (
     <Layout>
-      <div className="py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl sm:tracking-tight lg:text-6xl">
-              Football Data & Journal App
-            </h1>
-            <p className="mt-5 max-w-xl mx-auto text-xl text-gray-500">
-              Access comprehensive football statistics and create insightful journals about your favorite teams, matches, and players.
-            </p>
-            <div className="mt-8 flex justify-center">
-              <Link
-                to="/dashboard"
-                className="btn-primary text-lg px-6 py-3"
-              >
-                Get Started
-              </Link>
+      <div className="hero">
+        <h1 className="hero-title">Football Data & Journal App</h1>
+        <p className="hero-description">
+          Access comprehensive football statistics and create insightful journals about your favorite teams, matches, and players.
+        </p>
+        <Link to="/dashboard" className="hero-button">
+          Get Started
+        </Link>
+      </div>
+
+      <div className="features">
+        <div className="features-grid">
+          <div className="feature-card card">
+            <div className="feature-icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
             </div>
+            <h3 className="feature-title">Rich Data Visualization</h3>
+            <p className="feature-description">
+              Explore comprehensive statistics with intuitive charts and graphs.
+            </p>
           </div>
 
-          <div className="mt-16">
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-              <div className="card text-center">
-                <div className="text-primary-600 mb-4">
-                  <svg className="h-12 w-12 mx-auto" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-5h10v2H7v-2zm0-4h10v2H7v-2zm0-4h5v2H7V7z"></path>
-                  </svg>
-                </div>
-                <h3 className="text-lg font-medium text-gray-900">Rich Data Visualization</h3>
-                <p className="mt-2 text-gray-500">
-                  Explore comprehensive statistics with intuitive charts and graphs.
-                </p>
-              </div>
-
-              <div className="card text-center">
-                <div className="text-primary-600 mb-4">
-                  <svg className="h-12 w-12 mx-auto" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-2-2H7v-2h10v2zm0-4H7v-2h10v2z"></path>
-                  </svg>
-                </div>
-                <h3 className="text-lg font-medium text-gray-900">Journal Creation</h3>
-                <p className="mt-2 text-gray-500">
-                  Write and publish your own analyses and insights on football events.
-                </p>
-              </div>
-
-              <div className="card text-center">
-                <div className="text-primary-600 mb-4">
-                  <svg className="h-12 w-12 mx-auto" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path>
-                  </svg>
-                </div>
-                <h3 className="text-lg font-medium text-gray-900">Player Analysis</h3>
-                <p className="mt-2 text-gray-500">
-                  Track player performance with detailed statistics and historical data.
-                </p>
-              </div>
+          <div className="feature-card card">
+            <div className="feature-icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
             </div>
+            <h3 className="feature-title">Journal Creation</h3>
+            <p className="feature-description">
+              Write and publish your own analyses and insights on football events.
+            </p>
+          </div>
+
+          <div className="feature-card card">
+            <div className="feature-icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <h3 className="feature-title">Player Analysis</h3>
+            <p className="feature-description">
+              Track player performance with detailed statistics and historical data.
+            </p>
           </div>
         </div>
       </div>

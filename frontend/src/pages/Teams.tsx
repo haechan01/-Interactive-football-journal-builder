@@ -1,95 +1,184 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { useTeams } from '../hooks/useFootballData';
+import TeamCard from '../components/Teams/TeamCard';
+import TeamFilter from '../components/Teams/TeamFilter';
+import { Spinner, SkeletonCard } from '../components/UI/Loaders';
+
+interface Team {
+  id: number;
+  name: string;
+  country: string;
+  logo: string;
+  founded?: number;
+}
 
 const Teams = () => {
-  const [leagueId, setLeagueId] = useState<number | undefined>(undefined);
-  const [season, setSeason] = useState<number>(new Date().getFullYear());
-  const { teams, loading, error } = useTeams(leagueId, season);
-  const navigate = useNavigate();
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<{
+    league?: number;
+    season?: number;
+    country?: string;
+    search?: string;
+  }>({
+    league: 39, // Default to Premier League
+    season: 2023, // Default to current season
+  });
+
+  // ... existing code ...
+
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        setLoading(true);
+        
+        // Build API URL with filters
+        // Use absolute URL to bypass Vite's dev server
+        let apiUrl = 'http://127.0.0.1:8000/api/teams?';
+        
+        // If you're using a proxy in vite.config.js, use this instead:
+        // let apiUrl = '/api/teams?';
+        
+        const queryParams = [];
+        
+        if (filters.league) {
+          queryParams.push(`league=${filters.league}`);
+        }
+        
+        if (filters.season) {
+          queryParams.push(`season=${filters.season}`);
+        }
+        
+        apiUrl += queryParams.join('&');
+        
+        console.log('Fetching teams from:', apiUrl);
+        
+        // Make the actual API request
+        const response = await fetch(apiUrl);
+        
+        // Check for non-JSON responses
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await response.text();
+          console.error('Received non-JSON response:', text.substring(0, 100) + '...');
+          throw new Error(`API returned non-JSON response (${response.status}: ${response.statusText})`);
+        }
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`API error: ${response.status} - ${errorData.error || errorData.message || 'Unknown error'}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!data.response && !Array.isArray(data)) {
+          console.error('Unexpected API response format:', data);
+          throw new Error('Unexpected API response format');
+        }
+        
+        // Handle both formats: {response: [...]} or direct array
+        let fetchedTeams = Array.isArray(data) ? data : (data.response || []);
+        
+        // Apply client-side filters if needed
+        if (filters.country) {
+          fetchedTeams = fetchedTeams.filter((team: any) => {
+            const teamData = team.team || team;
+            return teamData.country?.toLowerCase().includes(filters.country!.toLowerCase());
+          });
+        }
+        
+        if (filters.search) {
+          fetchedTeams = fetchedTeams.filter((team: any) => {
+            const teamData = team.team || team;
+            return teamData.name?.toLowerCase().includes(filters.search!.toLowerCase());
+          });
+        }
+        
+        // Map API response to our Team interface, handling both possible response formats
+        const mappedTeams: Team[] = fetchedTeams.map((item: any) => {
+          const teamData = item.team || item;
+          return {
+            id: teamData.id,
+            name: teamData.name,
+            country: teamData.country,
+            logo: teamData.logo,
+            founded: teamData.founded
+          };
+        });
+        
+        setTeams(mappedTeams);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching teams:', err);
+        setError(`Failed to load teams: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        setLoading(false);
+      }
+    };
+    
+    fetchTeams();
+  }, [filters]);
+
+
+
+  const handleFilterChange = (newFilters: {
+    league?: number;
+    season?: number;
+    country?: string;
+    search?: string;
+  }) => {
+    setFilters(newFilters);
+  };
 
   return (
     <Layout>
-      <div>
-        <h1 className="text-3xl font-bold mb-6">Football Teams</h1>
-        
-        <div className="mb-6 flex flex-col md:flex-row gap-4">
-          <div className="w-full md:w-1/3">
-            <label htmlFor="league" className="label">League</label>
-            <select
-              id="league"
-              className="input"
-              value={leagueId || ''}
-              onChange={(e) => setLeagueId(e.target.value ? Number(e.target.value) : undefined)}
-            >
-              <option value="">All Leagues</option>
-              <option value="39">Premier League</option>
-              <option value="140">La Liga</option>
-              <option value="78">Bundesliga</option>
-              <option value="135">Serie A</option>
-              <option value="61">Ligue 1</option>
-            </select>
-          </div>
-          
-          <div className="w-full md:w-1/3">
-            <label htmlFor="season" className="label">Season</label>
-            <select
-              id="season"
-              className="input"
-              value={season}
-              onChange={(e) => setSeason(Number(e.target.value))}
-            >
-              <option value="2024">2024</option>
-              <option value="2023">2023</option>
-              <option value="2022">2022</option>
-              <option value="2021">2021</option>
-              <option value="2020">2020</option>
-            </select>
-          </div>
-        </div>
-        
-        {loading && (
-          <div className="text-center py-10">Loading teams...</div>
-        )}
-        
-        {error && (
-          <div className="bg-red-100 text-red-700 p-4 rounded-md mb-6">
-            {error}
-          </div>
-        )}
-        
-        {!loading && !error && teams.length === 0 && (
-          <div className="text-center py-10 text-gray-500">
-            No teams found. Try changing your filters.
-          </div>
-        )}
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {teams.map((team) => (
-            <div 
-              key={team.id} 
-              className="card cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => navigate(`/teams/${team.id}`)}
-            >
-              <div className="flex items-center">
-                <img 
-                  src={team.logo} 
-                  alt={`${team.name} logo`}
-                  className="w-16 h-16 object-contain mr-4"
-                />
-                <div>
-                  <h3 className="font-bold text-lg">{team.name}</h3>
-                  <p className="text-gray-600">{team.country}</p>
-                  {team.founded && (
-                    <p className="text-sm text-gray-500">Founded: {team.founded}</p>
-                  )}
-                </div>
-              </div>
-            </div>
+      <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Football Teams</h1>
+      
+      <TeamFilter onFilterChange={handleFilterChange} />
+      
+      {loading && (
+        <div className="team-grid">
+          {[...Array(6)].map((_, i) => (
+            <SkeletonCard key={i} />
           ))}
         </div>
-      </div>
+      )}
+      
+      {error && (
+        <div className="error-container">
+          <svg className="error-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <p className="error-message">{error}</p>
+          <button 
+            className="button button-primary"
+            onClick={() => window.location.reload()}
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+      
+      {!loading && !error && teams.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '4rem 0', color: '#6b7280' }}>
+          <p>No teams found matching your filters. Try adjusting your search criteria.</p>
+        </div>
+      )}
+      
+      {!loading && !error && teams.length > 0 && (
+        <div className="team-grid">
+          {teams.map(team => (
+            <TeamCard 
+              key={team.id} 
+              id={team.id} 
+              name={team.name} 
+              country={team.country} 
+              logo={team.logo} 
+              founded={team.founded} 
+            />
+          ))}
+        </div>
+      )}
     </Layout>
   );
 };

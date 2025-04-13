@@ -8,10 +8,12 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="layout">
       <Header />
-      <main className="flex-grow container mx-auto px-4 py-8">
-        {children}
+      <main className="main">
+        <div className="container">
+          {children}
+        </div>
       </main>
       <Footer />
     </div>

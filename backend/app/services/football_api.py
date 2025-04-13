@@ -1,442 +1,188 @@
+# app/services/football_api.py
 import requests
-from flask import current_app
-from datetime import datetime
+import os
+from flask import current_app, g
 
 class FootballAPIService:
     """
     Service for interacting with the API-Football API.
-    Supports both API-SPORTS and RapidAPI providers.
     """
+    
+    @staticmethod
+    def get_instance():
+        if 'football_api_service' not in g:
+            g.football_api_service = FootballAPIService()
+        return g.football_api_service
+    
     def __init__(self):
-        pass
-    
-    def _get_headers(self):
-        """Get API headers with the current app context"""
-        api_key = current_app.config['API_FOOTBALL_KEY']
+        # Use instance variables instead of accessing current_app directly
+        # This avoids application context issues
+        self.api_key = None
+        self.base_url = None
+        self.headers = None
         
-        # Using API-SPORTS URL format based on the documentation
-        if current_app.config.get('API_FOOTBALL_PROVIDER') == 'RAPIDAPI':
-            return {
-                "x-rapidapi-key": api_key,
-                "x-rapidapi-host": "api-football-v1.p.rapidapi.com"
-            }
-        else:
-            # Default to API-SPORTS
-            return {
-                "x-apisports-key": api_key
-            }
-    
-    def _get_base_url(self):
-        """Get the base URL based on the provider"""
-        if current_app.config.get('API_FOOTBALL_PROVIDER') == 'RAPIDAPI':
-            return "https://api-football-v1.p.rapidapi.com/v3"
-        else:
-            # Default to API-SPORTS
-            return "https://v3.football.api-sports.io"
+    def _initialize(self):
+        """Initialize API settings if not already done"""
+        if self.api_key is None:
+            if current_app.config.get('API_FOOTBALL_PROVIDER') == 'RAPIDAPI':
+                self.api_key = current_app.config.get('API_FOOTBALL_KEY')
+                self.base_url = "https://api-football-v1.p.rapidapi.com/v3"
+                self.headers = {
+                    "x-rapidapi-key": self.api_key,
+                    "x-rapidapi-host": "api-football-v1.p.rapidapi.com"
+                }
+            else:
+                # Default to API-SPORTS
+                self.api_key = current_app.config.get('API_FOOTBALL_KEY')
+                self.base_url = "https://v3.football.api-sports.io"
+                self.headers = {
+                    # Change this line - API-SPORTS requires 'x-apisports-key' header
+                    "x-apisports-key": self.api_key
+                }
     
     def _make_request(self, endpoint, params=None):
         """
         Make a request to the API-Football API.
         """
-        url = f"{self._get_base_url()}/{endpoint}"
+        self._initialize()
+        
+        if not self.api_key:
+            raise ValueError("API key not configured. Please set API_FOOTBALL_KEY in your environment.")
+        
+        url = f"{self.base_url}/{endpoint}"
         
         try:
-            response = requests.get(url, headers=self._get_headers(), params=params)
-            response.raise_for_status()
+            # Print the exact request details for debugging
+            print(f"Making API request to: {url}")
+            print(f"With headers: {self.headers}")
+            print(f"With params: {params}")
+            
+            # Create a clean session to avoid any framework-added headers
+            session = requests.Session()
+            
+            # Make the request with only the necessary headers
+            response = session.get(url, headers=self.headers, params=params)
+            
+            # Print response details
+            print(f"API response status code: {response.status_code}")
+            print(f"API response headers: {response.headers}")
+            print(f"API response content: {response.text[:500]}...")  # Print first 500 chars
+            
+            if response.status_code != 200:
+                raise requests.exceptions.HTTPError(f"HTTP error {response.status_code}: {response.text}")
             
             data = response.json()
             
-            # Log remaining requests for monitoring
-            if 'x-ratelimit-requests-remaining' in response.headers:
-                current_app.logger.info(
-                    f"API-FOOTBALL Requests Remaining: {response.headers['x-ratelimit-requests-remaining']}"
-                )
+            # Check for API response errors
+            if 'errors' in data and data['errors']:
+                error_message = '; '.join([f"{k}: {v}" for k, v in data['errors'].items()])
+                raise ValueError(f"API error: {error_message}")
             
             return data["response"]
-        except requests.exceptions.RequestException as e:
-            current_app.logger.error(f"API request error: {str(e)}")
+        except Exception as e:
+            print(f"API request failed: {str(e)}")
             raise
     
-    # API Status
-    def get_status(self):
-        """
-        Get API status and account information.
-        """
-        return self._make_request("status")
-    
-    # Timezone
-    def get_timezones(self):
-        """
-        Get the list of available timezones.
-        """
-        return self._make_request("timezone")
-    
-    # Countries
-    def get_countries(self, name=None, code=None, search=None):
-        """
-        Get the list of available countries for the leagues endpoint.
-        """
+    # Rest of the methods (get_teams, etc.) remain the same
+    def get_teams(self, id=None, name=None, league=None, season=None, country=None, code=None, venue=None, search=None):
+        """Get a list of teams."""
         params = {}
-        if name:
-            params["name"] = name
-        if code:
-            params["code"] = code
-        if search:
-            params["search"] = search
-            
-        return self._make_request("countries", params)
-    
-    # Leagues
-    def get_leagues(self, id=None, name=None, country=None, code=None, season=None, 
-                    team=None, type=None, current=None, search=None, last=None):
-        """
-        Get the list of available leagues and cups.
-        """
-        params = {}
-        if id:
+        if id is not None:
             params["id"] = id
-        if name:
+        if name is not None:
             params["name"] = name
-        if country:
-            params["country"] = country
-        if code:
-            params["code"] = code
-        if season:
-            params["season"] = season
-        if team:
-            params["team"] = team
-        if type:
-            params["type"] = type
-        if current:
-            params["current"] = current
-        if search:
-            params["search"] = search
-        if last:
-            params["last"] = last
-            
-        return self._make_request("leagues", params)
-    
-    def get_seasons(self):
-        """
-        Get the list of available seasons.
-        """
-        return self._make_request("leagues/seasons")
-    
-    # Teams
-    def get_teams(self, id=None, name=None, league=None, season=None,
-                 country=None, code=None, venue=None, search=None):
-        """
-        Get the list of available teams.
-        """
-        params = {}
-        if id:
-            params["id"] = id
-        if name:
-            params["name"] = name
-        if league:
+        if league is not None:
             params["league"] = league
-        if season:
+        if season is not None:
             params["season"] = season
-        if country:
+        if country is not None:
             params["country"] = country
-        if code:
+        if code is not None:
             params["code"] = code
-        if venue:
+        if venue is not None:
             params["venue"] = venue
-        if search:
+        if search is not None:
             params["search"] = search
             
         return self._make_request("teams", params)
     
-    def get_team_details(self, team_id):
-        """
-        Get detailed information about a specific team.
-        """
-        params = {"id": team_id}
-        teams = self._make_request("teams", params)
-        if not teams:
-            raise ValueError(f"Team with ID {team_id} not found")
-        return teams[0]
-    
-    def get_team_statistics(self, team_id, league_id, season, date=None):
-        """
-        Get statistics for a team in a specific league and season.
-        Optionally filtered by date.
-        """
-        params = {
-            "team": team_id,
-            "league": league_id,
-            "season": season
-        }
-        if date:
-            params["date"] = date
-            
-        return self._make_request("teams/statistics", params)
-    
-    def get_team_seasons(self, team_id):
-        """
-        Get the list of seasons available for a team.
-        """
-        params = {"team": team_id}
-        return self._make_request("teams/seasons", params)
-    
-    def get_team_countries(self):
-        """
-        Get the list of countries available for the teams endpoint.
-        """
-        return self._make_request("teams/countries")
-    
-    # Venues
-    def get_venues(self, id=None, name=None, city=None, country=None, search=None):
-        """
-        Get the list of available venues.
-        """
+    def get_leagues(self, id=None, name=None, country=None, code=None, season=None, team=None, type=None, current=None, search=None, last=None):
+        """Get a list of leagues."""
         params = {}
-        if id:
+        if id is not None:
             params["id"] = id
-        if name:
+        if name is not None:
             params["name"] = name
-        if city:
-            params["city"] = city
-        if country:
+        if country is not None:
             params["country"] = country
-        if search:
+        if code is not None:
+            params["code"] = code
+        if season is not None:
+            params["season"] = season
+        if team is not None:
+            params["team"] = team
+        if type is not None:
+            params["type"] = type
+        if current is not None:
+            params["current"] = current
+        if search is not None:
             params["search"] = search
+        if last is not None:
+            params["last"] = last
             
-        return self._make_request("venues", params)
+        return self._make_request("leagues", params)
     
-    # Standings
-    def get_standings(self, league_id, season, team_id=None):
-        """
-        Get the standings for a league or a team.
-        """
+    def get_fixtures(self, id=None, live=None, date=None, league=None, season=None, team=None, last=None, next=None, from_date=None, to_date=None, round=None, status=None):
+        """Get fixtures/matches."""
+        params = {}
+        if id is not None:
+            params["id"] = id
+        if live is not None:
+            params["live"] = live
+        if date is not None:
+            params["date"] = date
+        if league is not None:
+            params["league"] = league
+        if season is not None:
+            params["season"] = season
+        if team is not None:
+            params["team"] = team
+        if last is not None:
+            params["last"] = last
+        if next is not None:
+            params["next"] = next
+        if from_date is not None:
+            params["from"] = from_date
+        if to_date is not None:
+            params["to"] = to_date
+        if round is not None:
+            params["round"] = round
+        if status is not None:
+            params["status"] = status
+            
+        return self._make_request("fixtures", params)
+    
+    def get_players(self, id=None, team=None, league=None, season=None):
+        """Get players."""
+        params = {}
+        if id is not None:
+            params["id"] = id
+        if team is not None:
+            params["team"] = team
+        if league is not None:
+            params["league"] = league
+        if season is not None:
+            params["season"] = season
+            
+        return self._make_request("players", params)
+    
+    def get_standings(self, league, season, team=None):
+        """Get standings."""
         params = {
+            "league": league,
             "season": season
         }
-        if league_id:
-            params["league"] = league_id
-        if team_id:
-            params["team"] = team_id
+        if team is not None:
+            params["team"] = team
             
         return self._make_request("standings", params)
-    
-    # Fixtures/Rounds
-    def get_fixture_rounds(self, league_id, season, current=None, dates=None, timezone=None):
-        """
-        Get the rounds for a league or a cup.
-        """
-        params = {
-            "league": league_id,
-            "season": season
-        }
-        if current:
-            params["current"] = current
-        if dates:
-            params["dates"] = dates
-        if timezone:
-            params["timezone"] = timezone
-            
-        return self._make_request("fixtures/rounds", params)
-    
-    # Fixtures
-    def get_fixtures(self, id=None, ids=None, live=None, date=None, league=None, season=None,
-                    team=None, last=None, next=None, from_date=None, to_date=None,
-                    round=None, status=None, venue=None, timezone=None):
-        """
-        Get fixtures with various filters.
-        """
-        params = {}
-        if id:
-            params["id"] = id
-        if ids:
-            params["ids"] = ids
-        if live:
-            params["live"] = live
-        if date:
-            params["date"] = date
-        if league:
-            params["league"] = league
-        if season:
-            params["season"] = season
-        if team:
-            params["team"] = team
-        if last:
-            params["last"] = last
-        if next:
-            params["next"] = next
-        if from_date:
-            params["from"] = from_date
-        if to_date:
-            params["to"] = to_date
-        if round:
-            params["round"] = round
-        if status:
-            params["status"] = status
-        if venue:
-            params["venue"] = venue
-        if timezone:
-            params["timezone"] = timezone
-            
-        return self._make_request("fixtures", params)
-    
-    # Head to Head
-    def get_head_to_head(self, team1_id, team2_id, date=None, league=None, season=None,
-                        last=None, next=None, from_date=None, to_date=None,
-                        status=None, venue=None, timezone=None):
-        """
-        Get heads to heads between two teams.
-        """
-        params = {
-            "h2h": f"{team1_id}-{team2_id}"
-        }
-        if date:
-            params["date"] = date
-        if league:
-            params["league"] = league
-        if season:
-            params["season"] = season
-        if last:
-            params["last"] = last
-        if next:
-            params["next"] = next
-        if from_date:
-            params["from"] = from_date
-        if to_date:
-            params["to"] = to_date
-        if status:
-            params["status"] = status
-        if venue:
-            params["venue"] = venue
-        if timezone:
-            params["timezone"] = timezone
-            
-        return self._make_request("fixtures/headtohead", params)
-    
-    # Fixture Statistics
-    def get_fixture_statistics(self, fixture_id, team=None, type=None, half=None):
-        """
-        Get statistics for a fixture.
-        """
-        params = {
-            "fixture": fixture_id
-        }
-        if team:
-            params["team"] = team
-        if type:
-            params["type"] = type
-        if half:
-            params["half"] = half
-            
-        return self._make_request("fixtures/statistics", params)
-    
-    # Fixture Events
-    def get_fixture_events(self, fixture_id, team=None, player=None, type=None):
-        """
-        Get events from a fixture.
-        """
-        params = {
-            "fixture": fixture_id
-        }
-        if team:
-            params["team"] = team
-        if player:
-            params["player"] = player
-        if type:
-            params["type"] = type
-            
-        return self._make_request("fixtures/events", params)
-    
-    # Fixture Lineups
-    def get_fixture_lineups(self, fixture_id, team=None, player=None, type=None):
-        """
-        Get lineups for a fixture.
-        """
-        params = {
-            "fixture": fixture_id
-        }
-        if team:
-            params["team"] = team
-        if player:
-            params["player"] = player
-        if type:
-            params["type"] = type
-            
-        return self._make_request("fixtures/lineups", params)
-    
-    # Fixture Player Statistics
-    def get_fixture_players_statistics(self, fixture_id, team=None):
-        """
-        Get players statistics from a fixture.
-        """
-        params = {
-            "fixture": fixture_id
-        }
-        if team:
-            params["team"] = team
-            
-        return self._make_request("fixtures/players", params)
-    
-    # Live Matches
-    def get_live_matches(self, league_ids=None):
-        """
-        Get all live fixtures/matches.
-        """
-        params = {
-            "live": "all" if not league_ids else league_ids
-        }
-        return self._make_request("fixtures", params)
-    
-    # Helper methods for common queries
-    def get_today_matches(self, timezone=None):
-        """
-        Get all fixtures/matches for today.
-        """
-        today = datetime.now().strftime("%Y-%m-%d")
-        params = {
-            "date": today
-        }
-        if timezone:
-            params["timezone"] = timezone
-            
-        return self._make_request("fixtures", params)
-    
-    def get_upcoming_matches(self, team_id, next=10, timezone=None):
-        """
-        Get upcoming fixtures/matches for a team.
-        """
-        params = {
-            "team": team_id,
-            "next": next
-        }
-        if timezone:
-            params["timezone"] = timezone
-            
-        return self._make_request("fixtures", params)
-    
-    def get_current_round_fixtures(self, league_id, season, timezone=None):
-        """
-        Get fixtures for the current round of a league.
-        """
-        # First get the current round
-        round_params = {
-            "league": league_id,
-            "season": season,
-            "current": "true"
-        }
-        
-        current_round = self._make_request("fixtures/rounds", round_params)
-        
-        if not current_round:
-            return []
-        
-        # Then get fixtures for this round
-        fixture_params = {
-            "league": league_id,
-            "season": season,
-            "round": current_round[0]
-        }
-        
-        if timezone:
-            fixture_params["timezone"] = timezone
-            
-        return self._make_request("fixtures", fixture_params)

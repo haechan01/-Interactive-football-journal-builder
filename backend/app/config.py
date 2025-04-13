@@ -4,6 +4,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Debug: Print environment variables to verify they're loaded
+print(f"API_FOOTBALL_KEY loaded: {'Yes' if os.environ.get('API_FOOTBALL_KEY') else 'No'}")
+print(f"API_FOOTBALL_PROVIDER: {os.environ.get('API_FOOTBALL_PROVIDER', 'API-SPORTS')}")
+
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'hard-to-guess-string'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -14,7 +18,11 @@ class Config:
     API_FOOTBALL_KEY = os.environ.get('API_FOOTBALL_KEY')
     API_FOOTBALL_PROVIDER = os.environ.get('API_FOOTBALL_PROVIDER', 'API-SPORTS')  # 'API-SPORTS' or 'RAPIDAPI'
     
-    # Base URLs determined automatically in the service based on the provider
+    # Debug: Print config values
+    @classmethod
+    def print_config(cls):
+        print(f"Config API_FOOTBALL_KEY set: {'Yes' if cls.API_FOOTBALL_KEY else 'No'}")
+        print(f"Config API_FOOTBALL_PROVIDER: {cls.API_FOOTBALL_PROVIDER}")
     
 class DevelopmentConfig(Config):
     DEBUG = True

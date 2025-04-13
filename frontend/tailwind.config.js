@@ -1,4 +1,5 @@
-/** @type {import('tailwindcss').Config} */
+// tailwind.config.js (with ES module syntax)
+/** @type {import('@tailwindcss/postcss').Config} */
 export default {
   content: [
     "./index.html",
@@ -22,7 +23,5 @@ export default {
       },
     },
   },
-  plugins: [
-    require('@tailwindcss/forms'),
-  ],
+  plugins: [],
 }
