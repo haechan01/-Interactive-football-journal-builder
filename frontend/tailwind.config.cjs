@@ -1,6 +1,6 @@
-// tailwind.config.js (with ES module syntax)
+// tailwind.config.cjs
 /** @type {import('@tailwindcss/postcss').Config} */
-export default {
+module.exports = {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
