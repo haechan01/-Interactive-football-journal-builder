@@ -1,9 +1,19 @@
 #!/bin/bash
 set -e
 
+# Function to check if PostgreSQL is ready
+check_postgres() {
+  pg_isready -h db -U postgres
+  return $?
+}
+
 # Wait for the database to be ready
 echo "Waiting for database..."
-sleep 5
+until check_postgres; do
+  echo "Database is unavailable - sleeping"
+  sleep 2
+done
+echo "Database is up - continuing"
 
 # Navigate to the app directory
 cd /app
@@ -20,12 +30,24 @@ if [ ! -d "migrations" ] || [ ! -f "migrations/env.py" ]; then
     mkdir -p migrations/versions
 fi
 
-# Create and apply migrations
+# Check if there are valid migrations
+if [ -d "migrations/versions" ] && [ "$(ls -A migrations/versions)" ]; then
+    echo "Found existing migrations, trying to apply them..."
+    flask db stamp head
+fi
+
+# Create and apply migrations with a fresh start
 echo "Creating migration..."
 flask db migrate -m "Initial migration"
 
 echo "Applying migrations..."
-flask db upgrade
+# Using --sql option to see the SQL being executed
+flask db upgrade --sql || {
+    echo "Migration failed, attempting to stamp the database and retry..."
+    flask db stamp head
+    flask db migrate -m "Fresh migration" --sql
+    flask db upgrade --sql
+}
 
 # Start the Flask application
 echo "Starting Flask application..."
